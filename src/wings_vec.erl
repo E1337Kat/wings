@@ -109,7 +109,7 @@ magnet_message(Msg, Right) ->
 			     wings_msg:rmb_format(?__(2,"Magnet options"))),
     wings_wm:message(Message, Right).
 
-mode_restriction(Modes, #st{selmode=Mode}=St) ->
+mode_restriction(#ss{selmodes=Modes}, #st{selmode=Mode}=St) ->
     wings:mode_restriction(Modes),
     case member(Mode, Modes) of
 	true -> St;
@@ -142,10 +142,9 @@ get_event(Ss, St) ->
     wings_wm:dirty(),
     {replace,fun(Ev) -> handle_event(Ev, Ss, St) end}.
 
-handle_event({ask_init,Do,Done}, #ss{selmodes=Modes}=Ss,
-	     #st{selmode=Mode}=St0) ->
+handle_event({ask_init,Do,Done}, Ss, #st{selmode=Mode}=St0) ->
     wings_render:draw_orig_sel_dl(Mode),
-    St = wings_sel:reset(mode_restriction(Modes, St0)),
+    St = reset(Ss, mode_restriction(Ss, St0)),
     pick_next(Do, Done, Ss, St);
 handle_event(Event, Ss, St) ->
     case wings_camera:event(Event, St) of
@@ -208,6 +207,9 @@ handle_event_4({update_state,St}, #ss{f=Check}=Ss, _St0) ->
 handle_event_4(redraw, Ss, St) ->
     redraw(Ss, St),
     keep;
+handle_event_4({action,{select,deselect}}, Ss, #st{selmode=body} = St0) ->
+    St = reset(Ss,St0),
+    handle_event({new_state,St}, Ss, St);
 handle_event_4({action,{select,Cmd}}, Ss, St0) ->
     case wings_sel_cmd:command(Cmd, St0) of
 	#st{}=St0 -> keep;
